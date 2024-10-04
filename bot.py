@@ -90,10 +90,16 @@ async def submit(ctx, image_url=None):
         f"**New Drop Submission from {ctx.author.mention} ({team_role}):**\n{image}"
     )
 
-    # 6. Send a confirmation message to the user
-    await ctx.send(
-        f"Your drop has been submitted and is pending review in {staff_channel.mention}."
+    # 6. Delete the user's original message to keep the channel clean
+    await ctx.message.delete()
+
+    # 7. Send a confirmation message to the user
+    confirmation_message = await ctx.send(
+        f"✅ Your drop has been submitted and is pending review in {staff_channel.mention}."
     )
+
+    # 8. Automatically delete the confirmation message after 10 seconds
+    await confirmation_message.delete(delay=10)
 
 
 bot.run(token)
