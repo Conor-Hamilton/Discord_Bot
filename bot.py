@@ -5,22 +5,16 @@ import discord
 from discord.ext import commands
 import random
 
-# Load environment variables from .env file
 load_dotenv()
 token = os.getenv("DISCORD_TOKEN")
 
-# Set up bot intents
 intents = discord.Intents.default()
 intents.message_content = True
 
-# Initialize the bot with a command prefix
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# In-memory counter for drop submissions
-drop_counter = 1  # Start the drop counter from 1
-drop_submissions = (
-    {}
-)  # Dictionary to track submissions in the format { "DROP-001": metadata }
+drop_counter = 1
+drop_submissions = {}
 
 
 @bot.event
@@ -53,12 +47,19 @@ async def roll(ctx):
     await ctx.send(f"🎲 You rolled a {dice_roll}!")
 
 
-# Drop submission command with sequential ID
+# Drop submission command
 @bot.command()
 async def submit(ctx, image_url=None):
-    global drop_counter  
+    global drop_counter
 
-    # 1. Check if the user has a valid team role such as "Team 1", "Team 2", etc.
+    # Restrict to the specific channel
+    if ctx.channel.name != "drop-submissions":
+        await ctx.send(
+            "🚫 You can only use the `!submit` command in the `#drop-submissions` channel."
+        )
+        return
+
+    # Check for valid team role
     team_role = next(
         (
             role.name
@@ -73,14 +74,14 @@ async def submit(ctx, image_url=None):
         )
         return
 
-    # 2. Check if the user provided an image URL or attached an image
+    # Ensure an image URL or attachment is provided
     if not image_url and len(ctx.message.attachments) == 0:
         await ctx.send(
             "⚠️ Please provide an image URL or attach a screenshot of your drop with the command."
         )
         return
 
-    # 3. Validate the provided URL (if any)
+    # Validate the image URL if provided
     if image_url:
         if not re.match(r"^https?://.*\.(jpg|jpeg|png|gif)$", image_url, re.IGNORECASE):
             await ctx.send(
@@ -88,27 +89,39 @@ async def submit(ctx, image_url=None):
             )
             return
 
-    # 4. If no URL is provided, use the first attachment
+    # Handle attachments properly
     image = image_url
     if not image and len(ctx.message.attachments) > 0:
-        image = ctx.message.attachments[0].url
+        attachment = ctx.message.attachments[0]
+        print(
+            f"Attachment Debug Info: {attachment.filename}, {attachment.content_type}, {attachment.size}"
+        )
+        print(f"Attachment URL: {attachment.url}")
 
-    # 5. Generate a sequential drop ID using the counter
-    drop_id = f"DROP-{drop_counter:03}"  # Format: DROP-001, DROP-002, etc.
-    drop_counter += 1  
+        # Use the attachment if it is a valid image type
+        if attachment.content_type and attachment.content_type.startswith("image/"):
+            image = attachment.url
+            print(f"Using Attachment URL: {image}")
+        else:
+            await ctx.send(
+                "🚫 The attached file is not a valid image. Please upload an image file (.jpg, .png, .gif)."
+            )
+            return
 
-    # 6. Post the submission in the staff-only channel
-    staff_channel = discord.utils.get(ctx.guild.text_channels, name="drop-submissions")
+    drop_id = f"DROP-{drop_counter:03}"
+    drop_counter += 1
+
+    # Use the staff-review channel for submissions
+    staff_channel = discord.utils.get(ctx.guild.text_channels, name="staff-review")
     if not staff_channel:
-        await ctx.send("🚫 Drop submission channel not found. Please contact an admin.")
+        await ctx.send("🚫 Staff review channel not found. Please contact an admin.")
         return
 
-    # 7. Send the formatted message to the staff channel with the sequential ID
+    # Post the drop submission in the staff-review channel
     submission_message = await staff_channel.send(
         f"**New Drop Submission from {ctx.author.mention} ({team_role}):**\nDrop ID: `{drop_id}`\n{image}"
     )
 
-    # 8. Store the submission in the dictionary with metadata
     drop_submissions[drop_id] = {
         "message_id": submission_message.id,
         "submitter_id": ctx.author.id,
@@ -117,18 +130,13 @@ async def submit(ctx, image_url=None):
         "status": "Pending",
     }
 
-    # 9. Delete the user's original message to keep the channel clean
     await ctx.message.delete()
 
-    # 10. Send a confirmation message to the user
     confirmation_message = await ctx.send(
         f"✅ Your drop has been submitted with Drop ID: `{drop_id}` and is pending review in {staff_channel.mention}."
     )
-
-    # 11. Automatically delete the confirmation message after 10 seconds
     await confirmation_message.delete(delay=10)
 
-    # 12. Notify staff members with a role tag
     staff_role = discord.utils.get(ctx.guild.roles, name="Staff")
     if staff_role:
         await staff_channel.send(
