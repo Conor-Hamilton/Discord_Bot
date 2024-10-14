@@ -1,5 +1,4 @@
 import os
-import re
 from dotenv import load_dotenv
 import discord
 from discord.ext import commands
@@ -81,14 +80,6 @@ async def submit(ctx, image_url=None):
         )
         return
 
-    # Validate the image URL if provided
-    if image_url:
-        if not re.match(r"^https?://.*\.(jpg|jpeg|png|gif)$", image_url, re.IGNORECASE):
-            await ctx.send(
-                "🚫 Invalid image URL. Please use a direct link to a valid image (.jpg, .jpeg, .png, .gif)."
-            )
-            return
-
     # Handle attachments properly
     image = image_url
     if not image and len(ctx.message.attachments) > 0:
@@ -97,16 +88,8 @@ async def submit(ctx, image_url=None):
             f"Attachment Debug Info: {attachment.filename}, {attachment.content_type}, {attachment.size}"
         )
         print(f"Attachment URL: {attachment.url}")
-
-        # Use the attachment if it is a valid image type
-        if attachment.content_type and attachment.content_type.startswith("image/"):
-            image = attachment.url
-            print(f"Using Attachment URL: {image}")
-        else:
-            await ctx.send(
-                "🚫 The attached file is not a valid image. Please upload an image file (.jpg, .png, .gif)."
-            )
-            return
+        image = attachment.url
+        print(f"Using Attachment URL: {image}")
 
     drop_id = f"DROP-{drop_counter:03}"
     drop_counter += 1
