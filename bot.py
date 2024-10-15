@@ -31,16 +31,6 @@ async def on_command_error(ctx, error):
 
 
 @bot.command()
-async def hello(ctx):
-    await ctx.send("Hello! I'm your new bot.")
-
-
-@bot.command()
-async def ping(ctx):
-    await ctx.send("Pong! 🏓")
-
-
-@bot.command()
 async def roll(ctx):
     dice_roll = random.randint(1, 6)
     await ctx.send(f"🎲 You rolled a {dice_roll}!")
@@ -49,16 +39,14 @@ async def roll(ctx):
 # Drop submission command
 @bot.command()
 async def submit(ctx, image_url=None):
-    global drop_counter
+    global drop_counter, drop_submissions
 
-    # Restrict to the specific channel
     if ctx.channel.name != "drop-submissions":
         await ctx.send(
             "🚫 You can only use the `!submit` command in the `#drop-submissions` channel."
         )
         return
 
-    # Check for valid team role
     team_role = next(
         (
             role.name
@@ -73,14 +61,12 @@ async def submit(ctx, image_url=None):
         )
         return
 
-    # Ensure an image URL or attachment is provided
     if not image_url and len(ctx.message.attachments) == 0:
         await ctx.send(
             "⚠️ Please provide an image URL or attach a screenshot of your drop with the command."
         )
         return
 
-    # Handle attachments properly
     image = image_url
     if not image and len(ctx.message.attachments) > 0:
         attachment = ctx.message.attachments[0]
@@ -88,19 +74,18 @@ async def submit(ctx, image_url=None):
             f"Attachment Debug Info: {attachment.filename}, {attachment.content_type}, {attachment.size}"
         )
         print(f"Attachment URL: {attachment.url}")
+
         image = attachment.url
         print(f"Using Attachment URL: {image}")
 
     drop_id = f"DROP-{drop_counter:03}"
     drop_counter += 1
 
-    # Use the staff-review channel for submissions
     staff_channel = discord.utils.get(ctx.guild.text_channels, name="staff-review")
     if not staff_channel:
         await ctx.send("🚫 Staff review channel not found. Please contact an admin.")
         return
 
-    # Post the drop submission in the staff-review channel
     submission_message = await staff_channel.send(
         f"**New Drop Submission from {ctx.author.mention} ({team_role}):**\nDrop ID: `{drop_id}`\n{image}"
     )
@@ -125,6 +110,39 @@ async def submit(ctx, image_url=None):
         await staff_channel.send(
             f"{staff_role.mention}, a new drop has been submitted for review!\n**Drop ID:** `{drop_id}`"
         )
+
+
+@bot.command()
+async def confirm(ctx, drop_id: str):
+    global drop_submissions
+
+    drop_id = drop_id.upper()
+
+    if drop_id not in drop_submissions:
+        await ctx.send(f"⚠️ Drop ID `{drop_id}` not found.")
+        return
+
+    drop_data = drop_submissions[drop_id]
+    staff_channel = discord.utils.get(ctx.guild.text_channels, name="staff-review")
+    if not staff_channel:
+        await ctx.send("🚫 Staff review channel not found. Please contact an admin.")
+        return
+
+    submission_message = await staff_channel.fetch_message(drop_data["message_id"])
+
+    await submission_message.add_reaction("✅")
+
+    team_channel = discord.utils.get(
+        ctx.guild.text_channels, name=drop_data["team_role"].lower().replace(" ", "-")
+    )
+    if not team_channel:
+        await ctx.send(f"🚫 Team channel for {drop_data['team_role']} not found.")
+        return
+
+    await team_channel.send(
+        f"✅ Your drop with ID `{drop_id}` has been **approved** by staff!\nHere is your original submission:\n{drop_data['image_url']}"
+    )
+    await ctx.send(f"✅ Drop `{drop_id}` has been approved!")
 
 
 bot.run(token)
