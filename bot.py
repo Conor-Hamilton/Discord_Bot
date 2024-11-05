@@ -112,6 +112,7 @@ async def submit(ctx, image_url=None):
         )
 
 
+# Drop confirm command
 @bot.command()
 async def confirm(ctx, drop_id: str):
     global drop_submissions
@@ -143,6 +144,51 @@ async def confirm(ctx, drop_id: str):
         f"✅ Your drop with ID `{drop_id}` has been **approved** by staff!\nHere is your original submission:\n{drop_data['image_url']}"
     )
     await ctx.send(f"✅ Drop `{drop_id}` has been approved!")
+
+
+# Drop reject command
+@bot.command()
+async def reject(ctx, drop_id: str, *, reason: str = "No reason provided"):
+    global drop_submissions
+
+    drop_id = drop_id.upper()
+
+    if drop_id not in drop_submissions:
+        await ctx.send(f"⚠️ Drop ID `{drop_id}` not found.")
+        return
+
+    drop_data = drop_submissions[drop_id]
+    staff_channel = discord.utils.get(ctx.guild.text_channels, name="staff-review")
+    if not staff_channel:
+        await ctx.send("🚫 Staff review channel not found. Please contact an admin.")
+        return
+
+    submission_message = await staff_channel.fetch_message(drop_data["message_id"])
+
+    await submission_message.add_reaction("❌")
+
+    team_channel = discord.utils.get(
+        ctx.guild.text_channels, name=drop_data["team_role"].lower().replace(" ", "-")
+    )
+    if not team_channel:
+        await ctx.send(f"🚫 Team channel for {drop_data['team_role']} not found.")
+        return
+
+    submitter_id = drop_data["submitter_id"]
+    try:
+        submitter = await bot.fetch_user(submitter_id)
+    except discord.NotFound:
+        await ctx.send(
+            f"⚠️ Could not find the user who submitted drop `{drop_id}`. They may have left the server."
+        )
+        return
+
+    await team_channel.send(
+        f"❌ {submitter.mention}, your drop with ID `{drop_id}` has been **rejected** by staff.\n"
+        f"**Reason:** {reason}\nHere is your original submission:\n{drop_data['image_url']}"
+    )
+
+    await ctx.send(f"❌ Drop `{drop_id}` has been rejected with reason: {reason}")
 
 
 bot.run(token)
