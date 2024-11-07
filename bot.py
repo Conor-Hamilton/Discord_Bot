@@ -6,6 +6,7 @@ import random
 import json
 
 DATA_FILE = "drop_data.json"
+thumbnail_url = "https://i.imgur.com/5Ozwspq.png"
 
 
 def load_data():
@@ -48,17 +49,11 @@ async def on_ready():
 
 @bot.event
 async def on_command_error(ctx, error):
-    try:
-        await ctx.message.delete()
-    except discord.errors.NotFound:
-        pass
-
+    await ctx.message.delete()
     if isinstance(error, commands.CommandNotFound):
-        error_message = await ctx.send("That command does not exist! 😅")
-        await error_message.delete(delay=10)
+        await ctx.send("That command does not exist! 😅")
     else:
-        error_message = await ctx.send(f"An unexpected error occurred: {error}")
-        await error_message.delete(delay=10)
+        await ctx.send(f"An unexpected error occurred: {error}")
 
 
 @bot.command()
@@ -68,7 +63,6 @@ async def roll(ctx):
     await ctx.send(f"🎲 You rolled a {dice_roll}!")
 
 
-# Drop submission command
 @bot.command()
 async def submit(ctx, image_url=None):
     global drop_counter, drop_submissions
@@ -77,7 +71,6 @@ async def submit(ctx, image_url=None):
         error_message = await ctx.send(
             "🚫 You can only use the `!submit` command in the `#drop-submissions` channel."
         )
-        await ctx.message.delete()
         await error_message.delete(delay=10)
         return
 
@@ -93,7 +86,6 @@ async def submit(ctx, image_url=None):
         error_message = await ctx.send(
             "⛔ You don't seem to have a valid team role. Please contact a staff member."
         )
-        await ctx.message.delete()
         await error_message.delete(delay=10)
         return
 
@@ -101,28 +93,16 @@ async def submit(ctx, image_url=None):
         error_message = await ctx.send(
             "🚫 Only one attachment is allowed per submission. Please attach only one image."
         )
-        await ctx.message.delete()
         await error_message.delete(delay=10)
         return
 
     image = image_url
     if not image and len(ctx.message.attachments) == 1:
-        attachment = ctx.message.attachments[0]
-        if attachment.content_type and attachment.content_type.startswith("image/"):
-            image = attachment.url
-        else:
-            error_message = await ctx.send(
-                "⚠️ The attached file is not recognized as an image. Please attach a valid image file."
-            )
-            await ctx.message.delete()
-            await error_message.delete(delay=10)
-            return
-
+        image = ctx.message.attachments[0].url
     if not image:
         error_message = await ctx.send(
             "⚠️ Please provide an image URL or attach a screenshot of your drop with the command."
         )
-        await ctx.message.delete()
         await error_message.delete(delay=10)
         return
 
@@ -134,7 +114,6 @@ async def submit(ctx, image_url=None):
         error_message = await ctx.send(
             "🚫 Staff review channel not found. Please contact an admin."
         )
-        await ctx.message.delete()
         await error_message.delete(delay=10)
         return
 
@@ -144,6 +123,7 @@ async def submit(ctx, image_url=None):
         color=discord.Color.blue(),
     )
     embed.set_image(url=image)
+    embed.set_thumbnail(url=thumbnail_url)
 
     submission_message = await staff_channel.send(embed=embed)
 
@@ -222,19 +202,16 @@ async def confirm(ctx, drop_id: str, *, comment: str = None):
         return
 
     embed = discord.Embed(
-        title="✅ Drop Approved!",
+        title=f"✅ Drop Approved!",
         description=f"**Drop ID:** `{drop_id}`\n**Approved by:** {ctx.author.mention}",
         color=discord.Color.green(),
     )
-    embed.set_thumbnail(url="attachment://Sors_org_logo.png")
-    embed.add_field(
-        name="Comment",
-        value=comment if comment else "No additional comments.",
-        inline=False,
-    )
     embed.set_image(url=drop_data["image_url"])
+    embed.set_thumbnail(url=thumbnail_url)
+    if comment:
+        embed.add_field(name="Comment", value=comment, inline=False)
 
-    await team_channel.send(embed=embed, file=discord.File("Sors_org_logo.png"))
+    await team_channel.send(embed=embed)
     confirmation_message = await ctx.send(f"✅ Drop `{drop_id}` has been approved!")
     await confirmation_message.delete(delay=10)
 
@@ -298,64 +275,21 @@ async def reject(ctx, drop_id: str, *, reason: str = "No reason provided"):
         return
 
     embed = discord.Embed(
-        title="❌ Drop Rejected",
+        title=f"❌ Drop Rejected",
         description=f"**Drop ID:** `{drop_id}`\n**Rejected by:** {ctx.author.mention}",
         color=discord.Color.red(),
     )
-    embed.set_thumbnail(url="attachment://Sors_org_logo.png")
-    embed.add_field(name="Reason", value=reason, inline=False)
     embed.set_image(url=drop_data["image_url"])
+    embed.set_thumbnail(url=thumbnail_url)
+    embed.add_field(name="Reason", value=reason, inline=False)
 
-    await team_channel.send(
-        f"{submitter.mention}", embed=embed, file=discord.File("Sors_org_logo.png")
-    )
+    await team_channel.send(f"{submitter.mention}", embed=embed)
     rejection_message = await ctx.send(
         f"❌ Drop `{drop_id}` has been rejected with reason: {reason}"
     )
     await rejection_message.delete(delay=10)
 
     save_data()
-
-
-@bot.command()
-async def reset_data(ctx):
-    owner_id = 252465642802774017
-
-    if ctx.author.id != owner_id:
-        await ctx.send("⛔ You do not have permission to use this command.")
-        await ctx.message.delete(delay=5)
-        return
-
-    confirmation_message = await ctx.send(
-        "⚠️ Are you sure you want to reset all drop data? Type `!confirm_reset` to proceed."
-    )
-    await ctx.message.delete()
-
-    def check(m):
-        return (
-            m.content == "!confirm_reset"
-            and m.author.id == owner_id
-            and m.channel == ctx.channel
-        )
-
-    try:
-        confirm_message = await bot.wait_for("message", check=check, timeout=30)
-
-        global drop_counter, drop_submissions
-        drop_counter = 1
-        drop_submissions.clear()
-        save_data()
-
-        await ctx.send("✅ All drop data has been reset successfully.")
-        await confirm_message.delete()
-        await confirmation_message.delete()
-    except discord.ext.commands.errors.CommandInvokeError:
-        await ctx.send("❌ Error occurred during reset.")
-    except discord.errors.NotFound:
-        pass
-    except:
-        await ctx.send("❌ Reset cancelled due to no confirmation within time limit.")
-        await confirmation_message.delete(delay=5)
 
 
 bot.run(token)
