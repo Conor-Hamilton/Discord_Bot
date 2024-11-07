@@ -221,10 +221,12 @@ async def confirm(ctx, drop_id: str, *, comment: str = None):
         color=discord.Color.green(),
     )
     embed.set_image(url=drop_data["image_url"])
+    embed.set_thumbnail(url="attachment://Sors org logo.png")
+
     if comment:
         embed.add_field(name="Comment", value=comment, inline=False)
 
-    await team_channel.send(embed=embed)
+    await team_channel.send(embed=embed, file=discord.File("Sors org logo.png"))
     confirmation_message = await ctx.send(f"✅ Drop `{drop_id}` has been approved!")
     await confirmation_message.delete(delay=10)
 
@@ -288,14 +290,17 @@ async def reject(ctx, drop_id: str, *, reason: str = "No reason provided"):
         return
 
     embed = discord.Embed(
-        title=f"❌ Drop Rejected",
+        title="❌ Drop Rejected",
         description=f"**Drop ID:** `{drop_id}`\n**Rejected by:** {ctx.author.mention}",
         color=discord.Color.red(),
     )
     embed.set_image(url=drop_data["image_url"])
+    embed.set_thumbnail(url="attachment://Sors org logo.png")  # Set the thumbnail
     embed.add_field(name="Reason", value=reason, inline=False)
 
-    await team_channel.send(f"{submitter.mention}", embed=embed)
+    await team_channel.send(
+        f"{submitter.mention}", embed=embed, file=discord.File("Sors org logo.png")
+    )
     rejection_message = await ctx.send(
         f"❌ Drop `{drop_id}` has been rejected with reason: {reason}"
     )
