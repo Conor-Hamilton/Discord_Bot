@@ -6,7 +6,7 @@ import random
 import json
 
 DATA_FILE = "drop_data.json"
-thumbnail_url = "https://i.imgur.com/5Ozwspq.png"
+thumbnail_url = "https://i.imgur.com/5Ozwspq.png"  # Your Imgur link
 
 
 def load_data():
@@ -290,6 +290,47 @@ async def reject(ctx, drop_id: str, *, reason: str = "No reason provided"):
     await rejection_message.delete(delay=10)
 
     save_data()
+
+
+@bot.command()
+async def reset_data(ctx):
+    owner_id = 252465642802774017
+
+    if ctx.author.id != owner_id:
+        await ctx.send("⛔ You do not have permission to use this command.")
+        await ctx.message.delete(delay=5)
+        return
+
+    confirmation_message = await ctx.send(
+        "⚠️ Are you sure you want to reset all drop data? Type `!confirm_reset` to proceed."
+    )
+    await ctx.message.delete()
+
+    def check(m):
+        return (
+            m.content == "!confirm_reset"
+            and m.author.id == owner_id
+            and m.channel == ctx.channel
+        )
+
+    try:
+        confirm_message = await bot.wait_for("message", check=check, timeout=30)
+
+        global drop_counter, drop_submissions
+        drop_counter = 1
+        drop_submissions.clear()
+        save_data()
+
+        await ctx.send("✅ All drop data has been reset successfully.")
+        await confirm_message.delete()
+        await confirmation_message.delete()
+    except discord.ext.commands.errors.CommandInvokeError:
+        await ctx.send("❌ Error occurred during reset.")
+    except discord.errors.NotFound:
+        pass
+    except:
+        await ctx.send("❌ Reset cancelled due to no confirmation within time limit.")
+        await confirmation_message.delete(delay=5)
 
 
 bot.run(token)
