@@ -6,7 +6,7 @@ import random
 import json
 
 DATA_FILE = "drop_data.json"
-thumbnail_url = "https://imgur.com/a/Lj2gWd7"
+thumbnail_url = "https://i.imgur.com/RC3d1lr.png"
 
 
 def load_data():
