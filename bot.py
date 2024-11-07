@@ -48,11 +48,17 @@ async def on_ready():
 
 @bot.event
 async def on_command_error(ctx, error):
-    await ctx.message.delete()
+    try:
+        await ctx.message.delete()
+    except discord.errors.NotFound:
+        pass
+
     if isinstance(error, commands.CommandNotFound):
-        await ctx.send("That command does not exist! 😅")
+        error_message = await ctx.send("That command does not exist! 😅")
+        await error_message.delete(delay=10)
     else:
-        await ctx.send(f"An unexpected error occurred: {error}")
+        error_message = await ctx.send(f"An unexpected error occurred: {error}")
+        await error_message.delete(delay=10)
 
 
 @bot.command()
