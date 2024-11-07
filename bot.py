@@ -71,6 +71,7 @@ async def submit(ctx, image_url=None):
         error_message = await ctx.send(
             "🚫 You can only use the `!submit` command in the `#drop-submissions` channel."
         )
+        await ctx.message.delete()
         await error_message.delete(delay=10)
         return
 
@@ -86,6 +87,7 @@ async def submit(ctx, image_url=None):
         error_message = await ctx.send(
             "⛔ You don't seem to have a valid team role. Please contact a staff member."
         )
+        await ctx.message.delete()
         await error_message.delete(delay=10)
         return
 
@@ -93,16 +95,28 @@ async def submit(ctx, image_url=None):
         error_message = await ctx.send(
             "🚫 Only one attachment is allowed per submission. Please attach only one image."
         )
+        await ctx.message.delete()
         await error_message.delete(delay=10)
         return
 
     image = image_url
     if not image and len(ctx.message.attachments) == 1:
-        image = ctx.message.attachments[0].url
+        attachment = ctx.message.attachments[0]
+        if attachment.content_type and attachment.content_type.startswith("image/"):
+            image = attachment.url
+        else:
+            error_message = await ctx.send(
+                "⚠️ The attached file is not recognized as an image. Please attach a valid image file."
+            )
+            await ctx.message.delete()
+            await error_message.delete(delay=10)
+            return
+
     if not image:
         error_message = await ctx.send(
             "⚠️ Please provide an image URL or attach a screenshot of your drop with the command."
         )
+        await ctx.message.delete()
         await error_message.delete(delay=10)
         return
 
@@ -114,6 +128,7 @@ async def submit(ctx, image_url=None):
         error_message = await ctx.send(
             "🚫 Staff review channel not found. Please contact an admin."
         )
+        await ctx.message.delete()
         await error_message.delete(delay=10)
         return
 
