@@ -216,17 +216,19 @@ async def confirm(ctx, drop_id: str, *, comment: str = None):
         return
 
     embed = discord.Embed(
-        title=f"✅ Drop Approved!",
+        title="✅ Drop Approved!",
         description=f"**Drop ID:** `{drop_id}`\n**Approved by:** {ctx.author.mention}",
         color=discord.Color.green(),
     )
+    embed.set_thumbnail(url="attachment://Sors_org_logo.png")
+    embed.add_field(
+        name="Comment",
+        value=comment if comment else "No additional comments.",
+        inline=False,
+    )
     embed.set_image(url=drop_data["image_url"])
-    embed.set_thumbnail(url="attachment://Sors org logo.png")
 
-    if comment:
-        embed.add_field(name="Comment", value=comment, inline=False)
-
-    await team_channel.send(embed=embed, file=discord.File("Sors org logo.png"))
+    await team_channel.send(embed=embed, file=discord.File("Sors_org_logo.png"))
     confirmation_message = await ctx.send(f"✅ Drop `{drop_id}` has been approved!")
     await confirmation_message.delete(delay=10)
 
@@ -294,12 +296,12 @@ async def reject(ctx, drop_id: str, *, reason: str = "No reason provided"):
         description=f"**Drop ID:** `{drop_id}`\n**Rejected by:** {ctx.author.mention}",
         color=discord.Color.red(),
     )
-    embed.set_image(url=drop_data["image_url"])
-    embed.set_thumbnail(url="attachment://Sors org logo.png")  # Set the thumbnail
+    embed.set_thumbnail(url="attachment://Sors_org_logo.png")
     embed.add_field(name="Reason", value=reason, inline=False)
+    embed.set_image(url=drop_data["image_url"])
 
     await team_channel.send(
-        f"{submitter.mention}", embed=embed, file=discord.File("Sors org logo.png")
+        f"{submitter.mention}", embed=embed, file=discord.File("Sors_org_logo.png")
     )
     rejection_message = await ctx.send(
         f"❌ Drop `{drop_id}` has been rejected with reason: {reason}"
