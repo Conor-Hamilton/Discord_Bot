@@ -68,7 +68,6 @@ async def submit(
 ):
     global drop_counter, drop_submissions
 
-    # Restrict to #drop-submissions channel
     if interaction.channel.name != "drop-submissions":
         await interaction.response.send_message(
             "🚫 This command can only be used in the `#drop-submissions` channel.",
@@ -143,7 +142,6 @@ async def submit(
 async def confirm(interaction: discord.Interaction, drop_id: str, comment: str = None):
     global drop_submissions
 
-    # Restrict to #staff-review channel
     if interaction.channel.name != "staff-review":
         await interaction.response.send_message(
             "🚫 This command can only be used in the `#staff-review` channel.",
@@ -215,7 +213,6 @@ async def reject(
 ):
     global drop_submissions
 
-    # Restrict to #staff-review channel
     if interaction.channel.name != "staff-review":
         await interaction.response.send_message(
             "🚫 This command can only be used in the `#staff-review` channel.",
