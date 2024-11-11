@@ -131,6 +131,14 @@ async def submit(
         ephemeral=True,
     )
 
+    team_channel = discord.utils.get(
+        interaction.guild.text_channels, name=team_role.replace(" ", "-")
+    )
+    if team_channel:
+        await team_channel.send(
+            f"📥 {interaction.user.mention}, your drop with ID `{drop_id}` has been submitted and is currently under review by the staff team."
+        )
+
 
 @tree.command(name="confirm", description="Confirm a drop submission")
 @app_commands.describe(
