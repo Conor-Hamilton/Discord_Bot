@@ -1,5 +1,5 @@
 {
-    "drop_counter": 7,
+    "drop_counter": 8,
     "drop_submissions": {
         "DROP-001": {
             "submitter_id": 252465642802774017,
@@ -39,6 +39,12 @@
             "image_url": "https://cdn.discordapp.com/ephemeral-attachments/1303901284054601740/1305645538133151914/image.png?ex=6733c8aa&is=6732772a&hm=f8b47f19eb3399209d09bd7abfa128b7852893b578f8b0185f96db168f95c9a7&",
             "status": "Pending",
             "message_id": 1305645540180230187
+        },
+        "DROP-007": {
+            "submitter_id": 170742519548608512,
+            "team_role": "tile snipers",
+            "image_url": "https://cdn.discordapp.com/ephemeral-attachments/1303901284054601740/1305668659292667974/granticuscya_runescape_character_holding_a_sniper_rifle_aimed_a_f3689148-9fa0-4b2f-9b44-bf5fc670a71d-removebg-preview.png?ex=6733de32&is=67328cb2&hm=34859468e6d176df9ab3810243facaf94e8b3821141e86506ea30dba771d5731&",
+            "status": "Confirmed"
         }
     }
 }

@@ -68,13 +68,6 @@ async def submit(
 ):
     global drop_counter, drop_submissions
 
-    if interaction.channel.name != "drop-submissions":
-        await interaction.response.send_message(
-            "🚫 This command can only be used in the `#drop-submissions` channel.",
-            ephemeral=True,
-        )
-        return
-
     team_role = next(
         (
             role.name.lower()
@@ -106,13 +99,6 @@ async def submit(
 
     drop_id = f"DROP-{drop_counter:03}"
     drop_counter += 1
-    drop_submissions[drop_id] = {
-        "submitter_id": interaction.user.id,
-        "team_role": team_role,
-        "image_url": image_url,
-        "status": "Pending",
-    }
-    save_data()
 
     embed = discord.Embed(
         title=f"New Drop Submission from {interaction.user} ({team_role.title()}):",
@@ -126,12 +112,33 @@ async def submit(
         interaction.guild.text_channels, name="staff-review"
     )
     if staff_channel:
-        await staff_channel.send(embed=embed)
+        submission_message = await staff_channel.send(embed=embed)
+
+        drop_submissions[drop_id] = {
+            "message_id": submission_message.id,
+            "channel_id": staff_channel.id,
+            "submitter_id": interaction.user.id,
+            "team_role": team_role,
+            "image_url": image_url,
+            "status": "Pending",
+        }
+        save_data()
 
     await interaction.response.send_message(
         f"✅ Your drop with ID `{drop_id}` has been submitted and is pending review in {staff_channel.mention}.",
         ephemeral=True,
     )
+
+
+async def fetch_submission_message(guild, drop_data):
+    try:
+        channel = guild.get_channel(drop_data["channel_id"])
+        if not channel:
+            raise ValueError("Channel not found.")
+        message = await channel.fetch_message(drop_data["message_id"])
+        return message
+    except Exception as e:
+        return None
 
 
 @tree.command(name="confirm", description="Confirm a drop submission")
@@ -141,14 +148,6 @@ async def submit(
 @app_commands.checks.has_role("Staff")
 async def confirm(interaction: discord.Interaction, drop_id: str, comment: str = None):
     global drop_submissions
-
-    if interaction.channel.name != "staff-review":
-        await interaction.response.send_message(
-            "🚫 This command can only be used in the `#staff-review` channel.",
-            ephemeral=True,
-        )
-        return
-
     drop_id = drop_id.upper()
 
     if drop_id not in drop_submissions:
@@ -158,7 +157,6 @@ async def confirm(interaction: discord.Interaction, drop_id: str, comment: str =
         return
 
     drop_data = drop_submissions[drop_id]
-
     if drop_data["status"] != "Pending":
         await interaction.response.send_message(
             f"⚠️ Drop `{drop_id}` has already been {drop_data['status'].lower()}.",
@@ -166,20 +164,18 @@ async def confirm(interaction: discord.Interaction, drop_id: str, comment: str =
         )
         return
 
+    submission_message = await fetch_submission_message(interaction.guild, drop_data)
+    if submission_message:
+        await submission_message.add_reaction("✅")
+    else:
+        await interaction.response.send_message(
+            f"⚠️ Could not locate the original submission message for drop `{drop_id}`.",
+            ephemeral=True,
+        )
+        return
+
     drop_data["status"] = "Confirmed"
     save_data()
-
-    staff_channel = discord.utils.get(
-        interaction.guild.text_channels, name="staff-review"
-    )
-    if staff_channel:
-        try:
-            submission_message = await staff_channel.fetch_message(
-                drop_data["message_id"]
-            )
-            await submission_message.add_reaction("✅")
-        except discord.NotFound:
-            pass
 
     embed = discord.Embed(
         title="✅ Drop Approved!",
@@ -200,77 +196,6 @@ async def confirm(interaction: discord.Interaction, drop_id: str, comment: str =
 
     await interaction.response.send_message(
         f"✅ Drop `{drop_id}` has been approved.", ephemeral=True
-    )
-
-
-@tree.command(name="reject", description="Reject a drop submission")
-@app_commands.describe(
-    drop_id="ID of the drop to reject", reason="Reason for rejection"
-)
-@app_commands.checks.has_role("Staff")
-async def reject(
-    interaction: discord.Interaction, drop_id: str, reason: str = "No reason provided"
-):
-    global drop_submissions
-
-    if interaction.channel.name != "staff-review":
-        await interaction.response.send_message(
-            "🚫 This command can only be used in the `#staff-review` channel.",
-            ephemeral=True,
-        )
-        return
-
-    drop_id = drop_id.upper()
-
-    if drop_id not in drop_submissions:
-        await interaction.response.send_message(
-            f"⚠️ Drop ID `{drop_id}` not found.", ephemeral=True
-        )
-        return
-
-    drop_data = drop_submissions[drop_id]
-
-    if drop_data["status"] != "Pending":
-        await interaction.response.send_message(
-            f"⚠️ Drop `{drop_id}` has already been {drop_data['status'].lower()}.",
-            ephemeral=True,
-        )
-        return
-
-    drop_data["status"] = "Rejected"
-    save_data()
-
-    staff_channel = discord.utils.get(
-        interaction.guild.text_channels, name="staff-review"
-    )
-    if staff_channel:
-        try:
-            submission_message = await staff_channel.fetch_message(
-                drop_data["message_id"]
-            )
-            await submission_message.add_reaction("❌")
-        except discord.NotFound:
-            pass
-
-    embed = discord.Embed(
-        title="❌ Drop Rejected",
-        description=f"**Drop ID:** `{drop_id}`\n**Rejected by:** {interaction.user.mention}",
-        color=discord.Color.red(),
-    )
-    embed.set_image(url=drop_data["image_url"])
-    embed.set_thumbnail(url=thumbnail_url)
-    embed.add_field(name="Reason", value=reason, inline=False)
-
-    team_channel = discord.utils.get(
-        interaction.guild.text_channels,
-        name=drop_data["team_role"].replace(" ", "-"),
-    )
-    if team_channel:
-        submitter = await bot.fetch_user(drop_data["submitter_id"])
-        await team_channel.send(content=f"{submitter.mention}", embed=embed)
-
-    await interaction.response.send_message(
-        f"❌ Drop `{drop_id}` has been rejected.", ephemeral=True
     )
 
 
