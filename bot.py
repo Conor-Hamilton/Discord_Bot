@@ -285,36 +285,32 @@ async def reset_data(interaction: discord.Interaction):
         )
         return
 
-    confirmation_message = await interaction.response.send_message(
-        "⚠️ Are you sure you want to reset all drop data? Type `/confirm_reset` to proceed.",
+    class ConfirmButton(discord.ui.View):
+        @discord.ui.button(label="Confirm Reset", style=discord.ButtonStyle.danger)
+        async def confirm_reset(
+            self, button: discord.ui.Button, interaction: discord.Interaction
+        ):
+            if interaction.user.id != owner_id:
+                await interaction.response.send_message(
+                    "⛔ You do not have permission to use this button.", ephemeral=True
+                )
+                return
+
+            global drop_counter, drop_submissions
+            drop_counter = 1
+            drop_submissions.clear()
+            save_data()
+
+            await interaction.response.send_message(
+                "✅ All drop data has been reset successfully.", ephemeral=True
+            )
+
+    view = ConfirmButton()
+    await interaction.response.send_message(
+        "⚠️ Are you sure you want to reset all drop data? Click the button below to confirm.",
+        view=view,
         ephemeral=True,
     )
-
-    def check(m: discord.Message):
-        return (
-            m.content == "/confirm_reset"
-            and m.author.id == owner_id
-            and m.channel == interaction.channel
-        )
-
-    try:
-        confirm_message = await bot.wait_for("message", check=check, timeout=30)
-        global drop_counter, drop_submissions
-        drop_counter = 1
-        drop_submissions.clear()
-        save_data()
-
-        await interaction.followup.send("✅ All drop data has been reset successfully.")
-        await confirm_message.delete()
-    except discord.ext.commands.errors.CommandInvokeError:
-        await interaction.followup.send("❌ Error occurred during reset.")
-    except discord.errors.NotFound:
-        pass
-    except:
-        await interaction.followup.send(
-            "❌ Reset cancelled due to no confirmation within time limit.",
-            ephemeral=True,
-        )
 
 
 bot.run(TOKEN)
