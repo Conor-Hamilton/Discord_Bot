@@ -3,6 +3,7 @@ import discord
 from dotenv import load_dotenv
 from discord import app_commands
 import json
+from datetime import datetime, timedelta
 
 DATA_FILE = "drop_data.json"
 thumbnail_url = "https://i.imgur.com/RC3d1lr.png"
@@ -85,6 +86,9 @@ async def submit(
         )
         return
 
+    if not image_attachment and len(interaction.message.attachments) > 0:
+        image_attachment = interaction.message.attachments[0]
+
     if image_attachment:
         if not image_attachment.content_type.startswith("image/"):
             await interaction.response.send_message(
@@ -101,6 +105,14 @@ async def submit(
 
     drop_id = f"DROP-{drop_counter:03}"
     drop_counter += 1
+    drop_submissions[drop_id] = {
+        "submitter_id": interaction.user.id,
+        "team_role": team_role,
+        "image_url": image_url,
+        "status": "Pending",
+        "timestamp": datetime.utcnow().isoformat(),
+    }
+    save_data()
 
     embed = discord.Embed(
         title=f"New Drop Submission from {interaction.user} ({team_role.title()}):",
@@ -113,31 +125,15 @@ async def submit(
     staff_channel = discord.utils.get(
         interaction.guild.text_channels, name="staff-review"
     )
-    message = None
     if staff_channel:
         message = await staff_channel.send(embed=embed)
-
-    drop_submissions[drop_id] = {
-        "submitter_id": interaction.user.id,
-        "team_role": team_role,
-        "image_url": image_url,
-        "status": "Pending",
-        "message_id": message.id if message else None,
-    }
-    save_data()
+        drop_submissions[drop_id]["message_id"] = message.id
+        save_data()
 
     await interaction.response.send_message(
         f"✅ Your drop with ID `{drop_id}` has been submitted and is pending review in {staff_channel.mention}.",
         ephemeral=True,
     )
-
-    team_channel = discord.utils.get(
-        interaction.guild.text_channels, name=team_role.replace(" ", "-")
-    )
-    if team_channel:
-        await team_channel.send(
-            f"📥 {interaction.user.mention}, your drop with ID `{drop_id}` has been submitted and is currently under review by the staff team."
-        )
 
 
 @tree.command(name="confirm", description="Confirm a drop submission")
@@ -172,10 +168,13 @@ async def confirm(interaction: discord.Interaction, drop_id: str, comment: str =
         )
         return
 
+    drop_data["status"] = "Confirmed"
+    save_data()
+
     staff_channel = discord.utils.get(
         interaction.guild.text_channels, name="staff-review"
     )
-    if staff_channel and drop_data.get("message_id"):
+    if staff_channel:
         try:
             submission_message = await staff_channel.fetch_message(
                 drop_data["message_id"]
@@ -183,9 +182,6 @@ async def confirm(interaction: discord.Interaction, drop_id: str, comment: str =
             await submission_message.add_reaction("✅")
         except discord.NotFound:
             pass
-
-    drop_data["status"] = "Confirmed"
-    save_data()
 
     embed = discord.Embed(
         title="✅ Drop Approved!",
@@ -243,10 +239,13 @@ async def reject(
         )
         return
 
+    drop_data["status"] = "Rejected"
+    save_data()
+
     staff_channel = discord.utils.get(
         interaction.guild.text_channels, name="staff-review"
     )
-    if staff_channel and drop_data.get("message_id"):
+    if staff_channel:
         try:
             submission_message = await staff_channel.fetch_message(
                 drop_data["message_id"]
@@ -254,9 +253,6 @@ async def reject(
             await submission_message.add_reaction("❌")
         except discord.NotFound:
             pass
-
-    drop_data["status"] = "Rejected"
-    save_data()
 
     embed = discord.Embed(
         title="❌ Drop Rejected",
@@ -278,6 +274,47 @@ async def reject(
     await interaction.response.send_message(
         f"❌ Drop `{drop_id}` has been rejected.", ephemeral=True
     )
+
+
+@tree.command(name="reset_data", description="Reset all drop data (Owner only)")
+async def reset_data(interaction: discord.Interaction):
+    owner_id = 252465642802774017
+    if interaction.user.id != owner_id:
+        await interaction.response.send_message(
+            "⛔ You do not have permission to use this command.", ephemeral=True
+        )
+        return
+
+    confirmation_message = await interaction.response.send_message(
+        "⚠️ Are you sure you want to reset all drop data? Type `/confirm_reset` to proceed.",
+        ephemeral=True,
+    )
+
+    def check(m: discord.Message):
+        return (
+            m.content == "/confirm_reset"
+            and m.author.id == owner_id
+            and m.channel == interaction.channel
+        )
+
+    try:
+        confirm_message = await bot.wait_for("message", check=check, timeout=30)
+        global drop_counter, drop_submissions
+        drop_counter = 1
+        drop_submissions.clear()
+        save_data()
+
+        await interaction.followup.send("✅ All drop data has been reset successfully.")
+        await confirm_message.delete()
+    except discord.ext.commands.errors.CommandInvokeError:
+        await interaction.followup.send("❌ Error occurred during reset.")
+    except discord.errors.NotFound:
+        pass
+    except:
+        await interaction.followup.send(
+            "❌ Reset cancelled due to no confirmation within time limit.",
+            ephemeral=True,
+        )
 
 
 bot.run(TOKEN)
