@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from discord import app_commands
 import json
 from datetime import datetime, timedelta
+import random
 
 DATA_FILE = "drop_data.json"
 thumbnail_url = "https://i.imgur.com/RC3d1lr.png"
@@ -15,6 +16,16 @@ TEAM_NAMES = [
     "the noobs",
     "rocnars ramblers",
     "leagues waiting room",
+]
+
+TEAM_CAPTAINS = [
+    "Joshua",
+    "WiseOldGrant",
+    "Roldeh",
+    "Dewl Again",
+    "Them Is Me",
+    "Raathma",
+    "Solo Dani",
 ]
 
 
@@ -50,6 +61,36 @@ TOKEN = os.getenv("DISCORD_TOKEN")
 async def on_ready():
     await tree.sync()
     print(f"Logged in as {bot.user}!")
+
+
+@tree.command(
+    name="randomise",
+    description="Randomly pick and order team captains for the draft.",
+)
+async def randomise(interaction: discord.Interaction):
+    shuffled_captains = TEAM_CAPTAINS.copy()
+    random.shuffle(shuffled_captains)
+
+    draft_order = "\n".join(
+        [f"{i+1}. {captain}" for i, captain in enumerate(shuffled_captains)]
+    )
+
+    team_captains_role = discord.utils.get(
+        interaction.guild.roles, name="team captains"
+    )
+
+    embed = discord.Embed(
+        title="🎲 Team Captains Draft Order",
+        description=draft_order,
+        color=discord.Color.gold(),
+    )
+    embed.set_footer(text="Good luck!")
+
+    await interaction.response.send_message(
+        content=f"{team_captains_role.mention}, here is the draft order!",
+        embed=embed,
+        ephemeral=False,
+    )
 
 
 @tree.command(name="submit", description="Submit a drop for review")
@@ -276,6 +317,11 @@ async def reject(
     )
 
 
+import logging
+
+logging.basicConfig(level=logging.INFO)
+
+
 @tree.command(name="reset_data", description="Reset all drop data (Owner only)")
 async def reset_data(interaction: discord.Interaction):
     owner_id = 252465642802774017
@@ -288,30 +334,45 @@ async def reset_data(interaction: discord.Interaction):
     class ConfirmButton(discord.ui.View):
         @discord.ui.button(label="Confirm Reset", style=discord.ButtonStyle.danger)
         async def confirm_reset(
-            self, button: discord.ui.Button, button_interaction: discord.Interaction
+            self, interaction: discord.Interaction, button: discord.ui.Button
         ):
-            if button_interaction.user.id != owner_id:
-                await button_interaction.response.send_message(
+            if interaction.user.id != owner_id:
+                await interaction.response.send_message(
                     "⛔ You do not have permission to use this button.", ephemeral=True
                 )
                 return
 
             global drop_counter, drop_submissions
-            drop_counter = 1
-            drop_submissions.clear()
-            save_data()
 
-            await button_interaction.response.edit_message(
-                content="✅ All drop data has been reset successfully.", view=None
-            )
-            self.stop()
+            try:
+                drop_counter = 1
+                drop_submissions.clear()
+                save_data()
 
-    view = ConfirmButton()
-    await interaction.response.send_message(
-        "⚠️ Are you sure you want to reset all drop data? Click the button below to confirm.",
-        view=view,
-        ephemeral=True,
-    )
+                await interaction.response.edit_message(
+                    content="✅ All drop data has been reset successfully.", view=None
+                )
+                logging.info("Drop data successfully reset.")
+                self.stop()
+            except Exception as e:
+                logging.error(f"Error while resetting drop data: {e}")
+                await interaction.response.send_message(
+                    "❌ An error occurred while resetting drop data.", ephemeral=True
+                )
+
+    try:
+        view = ConfirmButton()
+        await interaction.response.send_message(
+            "⚠️ Are you sure you want to reset all drop data? Click the button below to confirm.",
+            view=view,
+            ephemeral=True,
+        )
+        logging.info("Reset confirmation sent.")
+    except Exception as e:
+        logging.error(f"Error while sending reset confirmation: {e}")
+        await interaction.response.send_message(
+            "❌ An error occurred while sending the reset confirmation.", ephemeral=True
+        )
 
 
 bot.run(TOKEN)
