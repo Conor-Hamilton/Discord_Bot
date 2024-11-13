@@ -301,8 +301,8 @@ async def reset_data(interaction: discord.Interaction):
             drop_submissions.clear()
             save_data()
 
-            await button_interaction.response.send_message(
-                "✅ All drop data has been reset successfully.", ephemeral=True
+            await button_interaction.response.edit_message(
+                content="✅ All drop data has been reset successfully.", view=None
             )
             self.stop()
 
