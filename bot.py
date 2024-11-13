@@ -288,10 +288,10 @@ async def reset_data(interaction: discord.Interaction):
     class ConfirmButton(discord.ui.View):
         @discord.ui.button(label="Confirm Reset", style=discord.ButtonStyle.danger)
         async def confirm_reset(
-            self, button: discord.ui.Button, interaction: discord.Interaction
+            self, button: discord.ui.Button, button_interaction: discord.Interaction
         ):
-            if interaction.user.id != owner_id:
-                await interaction.response.send_message(
+            if button_interaction.user.id != owner_id:
+                await button_interaction.response.send_message(
                     "⛔ You do not have permission to use this button.", ephemeral=True
                 )
                 return
@@ -301,9 +301,10 @@ async def reset_data(interaction: discord.Interaction):
             drop_submissions.clear()
             save_data()
 
-            await interaction.response.send_message(
+            await button_interaction.response.send_message(
                 "✅ All drop data has been reset successfully.", ephemeral=True
             )
+            self.stop()
 
     view = ConfirmButton()
     await interaction.response.send_message(
