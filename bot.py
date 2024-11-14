@@ -128,9 +128,6 @@ async def submit(
         )
         return
 
-    if not image_attachment and len(interaction.message.attachments) > 0:
-        image_attachment = interaction.message.attachments[0]
-
     if image_attachment:
         if not image_attachment.content_type.startswith("image/"):
             await interaction.response.send_message(
@@ -138,7 +135,17 @@ async def submit(
             )
             return
         image_url = image_attachment.url
-    elif not image_url:
+    elif image_url:
+        # Validate that the URL is an actual image URL
+        if not image_url.startswith("http") or not any(
+            image_url.endswith(ext) for ext in [".png", ".jpg", ".jpeg", ".gif"]
+        ):
+            await interaction.response.send_message(
+                "⚠️ The provided URL is not a valid image URL. Please ensure it ends with `.png`, `.jpg`, `.jpeg`, or `.gif`.",
+                ephemeral=True,
+            )
+            return
+    else:
         await interaction.response.send_message(
             "⚠️ Please provide an image URL or attach an image to submit.",
             ephemeral=True,

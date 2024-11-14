@@ -1,4 +1,13 @@
 {
-    "drop_counter": 1,
-    "drop_submissions": {}
+    "drop_counter": 2,
+    "drop_submissions": {
+        "DROP-001": {
+            "submitter_id": 252465642802774017,
+            "team_role": "leagues waiting room",
+            "image_url": "https://i.imgur.com/E7wXgv0.png",
+            "status": "Pending",
+            "timestamp": "2024-11-14T22:26:08.344951",
+            "message_id": 1306747023923351602
+        }
+    }
 }
