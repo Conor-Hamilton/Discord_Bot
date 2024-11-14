@@ -239,7 +239,8 @@ async def confirm(interaction: discord.Interaction, drop_id: str, comment: str =
         name=drop_data["team_role"].replace(" ", "-"),
     )
     if team_channel:
-        await team_channel.send(embed=embed)
+        submitter = await bot.fetch_user(drop_data["submitter_id"])
+        await team_channel.send(content=f"{submitter.mention}", embed=embed)
 
     await interaction.response.send_message(
         f"✅ Drop `{drop_id}` has been approved.", ephemeral=True
