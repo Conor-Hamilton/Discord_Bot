@@ -136,7 +136,6 @@ async def submit(
             return
         image_url = image_attachment.url
     elif image_url:
-        # Validate that the URL is an actual image URL
         if not image_url.startswith("http") or not any(
             image_url.endswith(ext) for ext in [".png", ".jpg", ".jpeg", ".gif"]
         ):
