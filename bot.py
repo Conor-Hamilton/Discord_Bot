@@ -117,7 +117,7 @@ async def submit(
         (
             role.name.lower()
             for role in interaction.user.roles
-            if role.name.lower() in TEAM_NAMES
+            if role.name.lower() in [team.lower() for team in TEAM_NAMES]
         ),
         None,
     )
