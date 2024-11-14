@@ -16,6 +16,7 @@ TEAM_NAMES = [
     "the noobs",
     "rocnars ramblers",
     "leagues waiting room",
+    "always the nubs",
 ]
 
 TEAM_CAPTAINS = [

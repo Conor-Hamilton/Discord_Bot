@@ -6,3 +6,6 @@ __pycache__/
 
 # Ignore environment variables file
 .env
+
+# Ignore database file
+drop_data.json
