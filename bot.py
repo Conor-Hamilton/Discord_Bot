@@ -10,12 +10,13 @@ DATA_FILE = "drop_data.json"
 thumbnail_url = "https://i.imgur.com/RC3d1lr.png"
 
 TEAM_NAMES = [
-    "shadowless monkeys",
-    "who are we",
-    "tile snipers",
-    "the noobs",
-    "rocnars ramblers",
-    "leagues waiting room",
+    "Shadowless Monkeys",
+    "Who are we",
+    "Tile Snipers",
+    "The Noobs",
+    "Rocnars Ramblers",
+    "Leagues Waiting Room",
+    "Always the nubs",
 ]
 
 TEAM_CAPTAINS = [
