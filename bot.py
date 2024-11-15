@@ -393,4 +393,43 @@ async def reset_data(interaction: discord.Interaction):
         )
 
 
+@tree.command(
+    name="download_data",
+    description="View or download the current drop data (Owner only)",
+)
+async def download_data(interaction: discord.Interaction):
+    owner_id = 252465642802774017
+    if interaction.user.id != owner_id:
+        await interaction.response.send_message(
+            "⛔ You do not have permission to use this command.", ephemeral=True
+        )
+        return
+
+    try:
+        with open(DATA_FILE, "r") as f:
+            drop_data = json.load(f)
+
+        formatted_data = json.dumps(drop_data, indent=4)
+        if len(formatted_data) <= 1990:
+            await interaction.response.send_message(
+                f"```json\n{formatted_data}```", ephemeral=True
+            )
+        else:
+            chunks = [
+                f"```json\n{formatted_data[i:i+1990]}```"
+                for i in range(0, len(formatted_data), 1990)
+            ]
+            await interaction.response.send_message(
+                "The data is too large to display in one message. Here it is in chunks:",
+                ephemeral=True,
+            )
+            for chunk in chunks:
+                await interaction.followup.send(chunk, ephemeral=True)
+
+    except Exception as e:
+        await interaction.response.send_message(
+            f"❌ An error occurred while retrieving the data: {e}", ephemeral=True
+        )
+
+
 bot.run(TOKEN)
