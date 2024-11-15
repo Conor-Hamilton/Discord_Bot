@@ -178,6 +178,16 @@ async def submit(
         drop_submissions[drop_id]["message_id"] = message.id
         save_data()
 
+    team_channel = discord.utils.get(
+        interaction.guild.text_channels,
+        name=team_role.replace(" ", "-"),
+    )
+    if team_channel:
+        await team_channel.send(
+            f"📥 {interaction.user.mention} has submitted a new drop for review!",
+            embed=embed,
+        )
+
     await interaction.response.send_message(
         f"✅ Your drop with ID `{drop_id}` has been submitted and is pending review in {staff_channel.mention}.",
         ephemeral=True,

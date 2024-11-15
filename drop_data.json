@@ -1,5 +1,5 @@
 {
-    "drop_counter": 2,
+    "drop_counter": 3,
     "drop_submissions": {
         "DROP-001": {
             "submitter_id": 252465642802774017,
@@ -8,6 +8,14 @@
             "status": "Pending",
             "timestamp": "2024-11-14T22:26:08.344951",
             "message_id": 1306747023923351602
+        },
+        "DROP-002": {
+            "submitter_id": 252465642802774017,
+            "team_role": "leagues waiting room",
+            "image_url": "https://cdn.discordapp.com/ephemeral-attachments/1303901284054601740/1306911978408640593/image.png?ex=67386420&is=673712a0&hm=f478a870ea605fad0953642063a177ecc4b3234b7f7c7d1817084adff5aec777&",
+            "status": "Pending",
+            "timestamp": "2024-11-15T09:21:39.340231",
+            "message_id": 1306911981340594197
         }
     }
 }
