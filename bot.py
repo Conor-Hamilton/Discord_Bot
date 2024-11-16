@@ -269,7 +269,8 @@ async def submit(
 async def confirm(interaction: discord.Interaction, drop_id: str, comment: str = None):
     conn, cursor = get_db_connection()
     try:
-        drop_id_clean = drop_id.upper().replace("DROP-", "")
+        # Strip "DROP-" prefix if present
+        drop_id_clean = drop_id.upper().replace("DROP-", "").strip()
         cursor.execute("SELECT * FROM drops WHERE drop_id = %s;", (drop_id_clean,))
         drop_data = cursor.fetchone()
 
@@ -296,16 +297,19 @@ async def confirm(interaction: discord.Interaction, drop_id: str, comment: str =
         if comment:
             embed.add_field(name="Comment", value=comment, inline=False)
 
-        # Fetch the staff-review channel message and add a reaction
         staff_channel = discord.utils.get(
             interaction.guild.text_channels, name="staff-review"
         )
         if staff_channel:
             try:
-                staff_message = await staff_channel.fetch_message(drop_data["drop_id"])
-                await staff_message.add_reaction("✅")
-            except discord.NotFound:
-                pass
+                staff_message = await staff_channel.history().find(
+                    lambda m: f"Drop ID: `DROP-{drop_id_clean}`"
+                    in m.embeds[0].description
+                )
+                if staff_message:
+                    await staff_message.add_reaction("✅")
+            except Exception as e:
+                print(f"Failed to add reaction: {e}")
 
         team_channel = discord.utils.get(
             interaction.guild.text_channels,
@@ -334,7 +338,7 @@ async def reject(
 ):
     conn, cursor = get_db_connection()
     try:
-        drop_id_clean = drop_id.upper().replace("DROP-", "")
+        drop_id_clean = drop_id.upper().replace("DROP-", "").strip()
         cursor.execute("SELECT * FROM drops WHERE drop_id = %s;", (drop_id_clean,))
         drop_data = cursor.fetchone()
 
@@ -345,7 +349,8 @@ async def reject(
             return
 
         cursor.execute(
-            "UPDATE drops SET status = 'Rejected' WHERE drop_id = %s;", (drop_id_clean,)
+            "UPDATE drops SET status = 'Rejected' WHERE drop_id = %s;",
+            (drop_id_clean,),
         )
         conn.commit()
 
@@ -358,16 +363,19 @@ async def reject(
         embed.set_thumbnail(url=thumbnail_url)
         embed.add_field(name="Reason", value=reason, inline=False)
 
-        # Fetch the staff-review channel message and add a reaction
         staff_channel = discord.utils.get(
             interaction.guild.text_channels, name="staff-review"
         )
         if staff_channel:
             try:
-                staff_message = await staff_channel.fetch_message(drop_data["drop_id"])
-                await staff_message.add_reaction("❌")
-            except discord.NotFound:
-                pass
+                staff_message = await staff_channel.history().find(
+                    lambda m: f"Drop ID: `DROP-{drop_id_clean}`"
+                    in m.embeds[0].description
+                )
+                if staff_message:
+                    await staff_message.add_reaction("❌")
+            except Exception as e:
+                print(f"Failed to add reaction: {e}")
 
         team_channel = discord.utils.get(
             interaction.guild.text_channels,
@@ -380,6 +388,7 @@ async def reject(
         await interaction.response.send_message(
             f"❌ Drop `DROP-{drop_id_clean}` has been rejected.", ephemeral=True
         )
+
     finally:
         cursor.close()
         conn.close()
