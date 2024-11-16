@@ -89,7 +89,6 @@ cursor.execute(
     """
     DO $$
     BEGIN
-        -- Check and add 'category' column if it doesn't exist
         IF NOT EXISTS (
             SELECT 1
             FROM information_schema.columns
@@ -98,7 +97,6 @@ cursor.execute(
             ALTER TABLE drops ADD COLUMN category TEXT;
         END IF;
 
-        -- Check and add 'progress' column if it doesn't exist
         IF NOT EXISTS (
             SELECT 1
             FROM information_schema.columns
@@ -110,10 +108,10 @@ cursor.execute(
     """
 )
 
-
 conn.commit()
 cursor.close()
 conn.close()
+
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -304,7 +302,7 @@ async def confirm(interaction: discord.Interaction, drop_id: str, comment: str =
             async for message in staff_channel.history(limit=100):
                 if (
                     message.embeds
-                    and f"Drop ID: `DROP-{drop_id_clean}`"
+                    and f"**Drop ID:** `DROP-{drop_id_clean}`"
                     in message.embeds[0].description
                 ):
                     found_message = message
@@ -373,7 +371,7 @@ async def reject(
             async for message in staff_channel.history(limit=100):
                 if (
                     message.embeds
-                    and f"Drop ID: `DROP-{drop_id_clean}`"
+                    and f"**Drop ID:** `DROP-{drop_id_clean}`"
                     in message.embeds[0].description
                 ):
                     found_message = message
