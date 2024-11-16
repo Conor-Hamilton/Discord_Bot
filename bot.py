@@ -279,13 +279,6 @@ async def confirm(interaction: discord.Interaction, drop_id: str, comment: str =
             )
             return
 
-        if drop_data["category"] not in CATEGORIES:
-            await interaction.response.send_message(
-                f"🚫 Invalid category in the database for this drop. Contact an administrator.",
-                ephemeral=True,
-            )
-            return
-
         cursor.execute(
             "UPDATE drops SET status = 'Confirmed' WHERE drop_id = %s;",
             (drop_id_clean,),
@@ -302,6 +295,17 @@ async def confirm(interaction: discord.Interaction, drop_id: str, comment: str =
 
         if comment:
             embed.add_field(name="Comment", value=comment, inline=False)
+
+        # Fetch the staff-review channel message and add a reaction
+        staff_channel = discord.utils.get(
+            interaction.guild.text_channels, name="staff-review"
+        )
+        if staff_channel:
+            try:
+                staff_message = await staff_channel.fetch_message(drop_data["drop_id"])
+                await staff_message.add_reaction("✅")
+            except discord.NotFound:
+                pass
 
         team_channel = discord.utils.get(
             interaction.guild.text_channels,
@@ -328,66 +332,57 @@ async def confirm(interaction: discord.Interaction, drop_id: str, comment: str =
 async def reject(
     interaction: discord.Interaction, drop_id: str, reason: str = "No reason provided"
 ):
-    if interaction.channel.name != "staff-review":
-        await interaction.response.send_message(
-            "🚫 This command can only be used in the `#staff-review` channel.",
-            ephemeral=True,
+    conn, cursor = get_db_connection()
+    try:
+        drop_id_clean = drop_id.upper().replace("DROP-", "")
+        cursor.execute("SELECT * FROM drops WHERE drop_id = %s;", (drop_id_clean,))
+        drop_data = cursor.fetchone()
+
+        if not drop_data:
+            await interaction.response.send_message(
+                f"⚠️ Drop ID `DROP-{drop_id_clean}` not found.", ephemeral=True
+            )
+            return
+
+        cursor.execute(
+            "UPDATE drops SET status = 'Rejected' WHERE drop_id = %s;", (drop_id_clean,)
         )
-        return
+        conn.commit()
 
-    drop_id = drop_id.upper().replace("DROP-", "")
+        embed = discord.Embed(
+            title="❌ Drop Rejected",
+            description=f"**Drop ID:** `DROP-{drop_id_clean}`\n**Category:** {drop_data['category']}\n**Rejected by:** {interaction.user.mention}",
+            color=discord.Color.red(),
+        )
+        embed.set_image(url=drop_data["image_url"])
+        embed.set_thumbnail(url=thumbnail_url)
+        embed.add_field(name="Reason", value=reason, inline=False)
 
-    conn = psycopg2.connect(DATABASE_URL, sslmode="require")
-    cursor = conn.cursor(cursor_factory=DictCursor)
+        # Fetch the staff-review channel message and add a reaction
+        staff_channel = discord.utils.get(
+            interaction.guild.text_channels, name="staff-review"
+        )
+        if staff_channel:
+            try:
+                staff_message = await staff_channel.fetch_message(drop_data["drop_id"])
+                await staff_message.add_reaction("❌")
+            except discord.NotFound:
+                pass
 
-    cursor.execute("SELECT * FROM drops WHERE drop_id = %s;", (drop_id,))
-    drop_data = cursor.fetchone()
+        team_channel = discord.utils.get(
+            interaction.guild.text_channels,
+            name=drop_data["team_role"].replace(" ", "-"),
+        )
+        if team_channel:
+            submitter = await bot.fetch_user(drop_data["submitter_id"])
+            await team_channel.send(content=f"{submitter.mention}", embed=embed)
 
-    if not drop_data:
+        await interaction.response.send_message(
+            f"❌ Drop `DROP-{drop_id_clean}` has been rejected.", ephemeral=True
+        )
+    finally:
         cursor.close()
         conn.close()
-        await interaction.response.send_message(
-            f"⚠️ Drop ID `DROP-{drop_id}` not found.", ephemeral=True
-        )
-        return
-
-    if drop_data["status"] != "Pending":
-        cursor.close()
-        conn.close()
-        await interaction.response.send_message(
-            f"⚠️ Drop `DROP-{drop_id}` has already been {drop_data['status'].lower()}.",
-            ephemeral=True,
-        )
-        return
-
-    cursor.execute(
-        "UPDATE drops SET status = 'Rejected' WHERE drop_id = %s;", (drop_id,)
-    )
-    conn.commit()
-
-    embed = discord.Embed(
-        title="❌ Drop Rejected",
-        description=f"**Drop ID:** `DROP-{drop_id}`\n**Rejected by:** {interaction.user.mention}",
-        color=discord.Color.red(),
-    )
-    embed.set_image(url=drop_data["image_url"])
-    embed.set_thumbnail(url=thumbnail_url)
-    embed.add_field(name="Reason", value=reason, inline=False)
-
-    team_channel = discord.utils.get(
-        interaction.guild.text_channels,
-        name=drop_data["team_role"].replace(" ", "-"),
-    )
-    if team_channel:
-        submitter = await bot.fetch_user(drop_data["submitter_id"])
-        await team_channel.send(content=f"{submitter.mention}", embed=embed)
-
-    cursor.close()
-    conn.close()
-
-    await interaction.response.send_message(
-        f"❌ Drop `DROP-{drop_id}` has been rejected.", ephemeral=True
-    )
 
 
 @tree.command(name="check", description="Check progress for a team and category.")
