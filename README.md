@@ -69,17 +69,6 @@ CREATE TABLE drops (
 - **Thumbnail URL:** Customise the thumbnail with your event's branding.  
 - **Categories and Teams:** Modify `TEAM_NAMES`, `TEAM_CAPTAINS`, and `CATEGORIES` in the script.
 
-## Contributing
-
-1. Fork the repository.  
-2. Create a feature branch:
-
-   ```bash
-   git checkout -b feature-name  
-   ```
-
-3. Commit your changes and open a pull request.
-
 ## License
 
 This project is licensed under the MIT License.
