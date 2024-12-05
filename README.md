@@ -2,8 +2,6 @@
 
 A Python-based Discord bot designed to manage and automate bingo events. It features a user-friendly interface for submitting and tracking bingo progress, designed specifically for OSRS-themed bingo challenges.
 
-![Bot Thumbnail](https://i.imgur.com/RC3d1lr.png)
-
 ## Features
 
 - **Team Management:**
